@@ -113,4 +113,8 @@ PROMPTS = {
 
     Entrada do usuário: {message}
     """,
+
+    "avaliacao_questionario": """
+    Faça a avaliação do questionario a seguir para a imagem e retorne somente respostas da avaliação em português, evite cálculos na resposta retornando só o resultado númerico: {message}
+    """,
 }

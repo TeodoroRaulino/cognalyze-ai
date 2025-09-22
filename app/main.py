@@ -4,11 +4,13 @@ from app.schemas import (
     GenerateQuestionnaireRequest, UpdateQuestionnaireRequest,
     AnalyzeRequest, LLMResponse,
     CreateProfileRequest, CreateProfileResponse,
+    EvaluationRequest, EvaluationResponse,
 )
 from app.usecase.profile_usecase import suggest_profile_name
 from app.usecase.questionnaire_usecase import generate_from_profile, update_questionnaire
 from app.usecase.analyze_usecase import analyze
 from app.usecase.profile_create_usecase import create_profile_assets
+from app.usecase.evaluation_usecase import evaluate_image
 
 app = FastAPI(title="Cognalyze Simple LLM API", version="0.2.0")
 
@@ -85,3 +87,16 @@ async def post_analyze_message(body: AnalyzeRequest):
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/evaluation", response_model=EvaluationResponse)
+async def post_questionnaire_with_image(body: EvaluationRequest):
+    try:
+        response_message = await evaluate_image(body.questionnaire, body.imageBase64)
+
+        return EvaluationResponse(
+            message=response_message,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")

@@ -1,4 +1,4 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Any, Dict
 from pydantic import BaseModel, Field
 
 class ExistingProfile(BaseModel):
@@ -40,3 +40,10 @@ class CreateProfileRequest(BaseModel):
 class CreateProfileResponse(BaseModel):
     guidelines: str = Field(..., description="Diretrizes recomendadas (Markdown)")
     questionnaire: str = Field(..., description="Questionário (Markdown)")
+
+class EvaluationRequest(BaseModel):
+    questionnaire: str = Field(..., description="Questionnaire in Markdown format")
+    imageBase64: str = Field(..., description="Image encoded in base64")
+
+class EvaluationResponse(BaseModel):
+    message: str
