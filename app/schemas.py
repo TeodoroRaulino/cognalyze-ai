@@ -1,5 +1,5 @@
 from typing import List, Optional, Literal, Any, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 class ExistingProfile(BaseModel):
     name: str = Field(..., description="Nome do perfil existente")
@@ -47,3 +47,20 @@ class EvaluationRequest(BaseModel):
 
 class EvaluationResponse(BaseModel):
     message: str
+
+class ResultInput(BaseModel):
+    message: str
+
+
+class ExecutiveReportRequest(BaseModel):
+    results: List[str] = Field(..., description="Lista de 1 a 10 resultados")
+
+    @validator("results")
+    def check_results_length(cls, v):
+        if not (1 <= len(v) <= 10):
+            raise ValueError("É necessário enviar entre 1 e 10 resultados.")
+        return v
+
+
+class ExecutiveReportResponse(BaseModel):
+    report: str

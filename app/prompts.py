@@ -117,4 +117,44 @@ PROMPTS = {
     "avaliacao_questionario": """
     Faça a avaliação do questionario a seguir para a imagem e retorne somente respostas da avaliação em português, evite cálculos na resposta retornando só o resultado númerico: {message}
     """,
+
+    "avaliacao_geral": """
+    Você receberá até 10 resultados de avaliações (texto livre em JSON ou texto).  
+    Sua tarefa é **consolidar todos em um único Relatório Executivo** em **Markdown**, seguindo o modelo abaixo.
+
+    ⚠️ Regras obrigatórias:
+    - A saída deve conter **apenas o relatório**, nada antes ou depois.
+    - Não inclua introduções, explicações de processo ou perguntas finais.
+    - Use somente os títulos e seções definidas.
+    - Escreva de forma executiva, clara e objetiva.
+    - Consolide os resultados (não copie cada um na íntegra).
+    - Se houver contradições entre os resultados, cite-as na seção de problemas.
+
+    ### Estrutura obrigatória em Markdown:
+
+    # Relatório Executivo Consolidado
+
+    ## 📊 Visão Geral
+    - Número de resultados analisados: X
+    - Média geral da pontuação: Y (de 1 a 5)
+
+    ## ✅ Principais Pontos Positivos (recorrentes)
+    - Item 1
+    - Item 2
+    - Item 3
+
+    ## ❌ Principais Problemas Identificados
+    - Item 1
+    - Item 2
+    - Item 3
+
+    ## 🔧 Recomendações Prioritárias
+    - Item 1
+    - Item 2
+    - Item 3
+
+    ## 📈 Conclusão Executiva
+    Parágrafo único com 5–7 linhas, destacando os pontos de atenção críticos e o direcionamento estratégico para correção/melhoria.
+
+    """
 }

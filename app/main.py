@@ -5,12 +5,13 @@ from app.schemas import (
     AnalyzeRequest, LLMResponse,
     CreateProfileRequest, CreateProfileResponse,
     EvaluationRequest, EvaluationResponse,
+    ResultInput, ExecutiveReportRequest, ExecutiveReportResponse
 )
 from app.usecase.profile_usecase import suggest_profile_name
 from app.usecase.questionnaire_usecase import generate_from_profile, update_questionnaire
 from app.usecase.analyze_usecase import analyze
 from app.usecase.profile_create_usecase import create_profile_assets
-from app.usecase.evaluation_usecase import evaluate_image
+from app.usecase.evaluation_usecase import evaluate_image, generate_executive_report
 
 app = FastAPI(title="Cognalyze Simple LLM API", version="0.2.0")
 
@@ -19,7 +20,7 @@ app = FastAPI(title="Cognalyze Simple LLM API", version="0.2.0")
 async def health():
     return {"status": "ok"}
 
-@app.post("/profiles/create", response_model=CreateProfileResponse)
+@app.post("/condition/generate", response_model=CreateProfileResponse)
 async def post_create_profile(body: CreateProfileRequest):
     try:
         result = await create_profile_assets(
@@ -100,3 +101,12 @@ async def post_questionnaire_with_image(body: EvaluationRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+@app.post(
+    "/reports/executive",
+    response_model=ExecutiveReportResponse,
+    summary="Gera Relatório Executivo Consolidado a partir de até 10 resultados",
+)
+async def create_executive_report(payload: ExecutiveReportRequest) -> ExecutiveReportResponse:
+    report = await generate_executive_report(payload.results)
+    return ExecutiveReportResponse(report=report)
