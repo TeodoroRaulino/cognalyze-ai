@@ -63,15 +63,18 @@ async def post_generate_questionnaire(body: GenerateQuestionnaireRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/questionnaires/update", response_model=LLMResponse)
+@app.post("/questionnaires/update", response_model=EvaluationResponse)
 async def post_update_questionnaire(body: UpdateQuestionnaireRequest):
     try:
-        content, used_prompt = await update_questionnaire(
-            questionnaire_md=body.questionnaire,
-            description_update=body.description_update,
+        response_message = await update_questionnaire(
+            profile_description=body.profile_description,
+            actual_questionnaire_md=body.actual_questionnaire_md,
+            new_questionnaire_md=body.new_questionnaire_md,
             model_override=body.model
         )
-        return LLMResponse(content=content, used_prompt=used_prompt)
+        return EvaluationResponse(
+            message=response_message,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

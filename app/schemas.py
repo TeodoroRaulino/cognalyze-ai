@@ -19,8 +19,9 @@ class GenerateQuestionnaireRequest(BaseModel):
     model: Optional[str] = Field(None, description="Modelo OpenAI opcional para override")
 
 class UpdateQuestionnaireRequest(BaseModel):
-    questionnaire: str = Field(..., description="Questionário em Markdown para ser atualizado")
-    description_update: str = Field(..., description="Nova descrição/observações para atualizar o questionário")
+    profile_description: str = Field(..., description="Descrição do perfil de acessibilidade")
+    actual_questionnaire_md: str = Field(..., description="Questionário atual em Markdown")
+    new_questionnaire_md: str = Field(..., description="Novo questionário em Markdown")
     model: Optional[str] = Field(None, description="Modelo OpenAI opcional para override")
 
 class AnalyzeRequest(BaseModel):

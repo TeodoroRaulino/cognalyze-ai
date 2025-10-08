@@ -1,4 +1,7 @@
 from app.openai_client import get_client, get_model
+from app.prompts import PROMPTS
+
+PROMPT_UPDATE_QUESTIONNAIRE = "atualizacao_questionario_v3"
 
 async def generate_from_profile(profile_name: str, profile_description: str, model_override: str | None):
     client = get_client()
@@ -31,29 +34,31 @@ Entrada do usuário: {{message}}
     content = (completion.choices[0].message.content or "").strip()
     return content, prompt
 
-async def update_questionnaire(questionnaire_md: str, description_update: str, model_override: str | None):
+async def update_questionnaire(profile_description: str, actual_questionnaire_md: str, new_questionnaire_md: str, model_override: str | None):
     client = get_client()
     model = get_model(model_override)
 
-    prompt = f"""
-Você é um especialista em acessibilidade cognitiva.
+    prompt = PROMPTS[PROMPT_UPDATE_QUESTIONNAIRE]
 
-Questionário atual (Markdown):
-{questionnaire_md}
+    data = {
+        "profile_description": profile_description,
+        "actual_questionnaire_md": actual_questionnaire_md
+    }
 
-Atualize o questionário considerando a seguinte nova descrição/observação:
-\"\"\"{description_update}\"\"\"
+    prompt = prompt.format(**data)
 
-Mantenha a estrutura original (critérios com Likert 1–5 + Resumo Executivo) e adapte somente o necessário.
-Entrada do usuário: {{message}}
-""".strip()
-
-    completion = await client.chat.completions.create(
+    response = await client.responses.create(
         model=model,
-        messages=[
-            {"role": "system", "content": "Você é um assistente especialista em acessibilidade cognitiva."},
-            {"role": "user", "content": prompt},
+        input=[
+            {
+                "role": "system",
+                "content": prompt,
+            },
+            {
+                "role": "user",
+                "content": new_questionnaire_md,
+            },
         ],
     )
-    content = (completion.choices[0].message.content or "").strip()
-    return content, prompt
+
+    return response.output_text

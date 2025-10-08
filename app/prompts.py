@@ -118,6 +118,127 @@ PROMPTS = {
     Faça a avaliação do questionario a seguir para a imagem e retorne somente respostas da avaliação em português, evite cálculos na resposta retornando só o resultado númerico: {message}
     """,
 
+    "atualizacao_questionario": """
+        Você é um especialista em acessibilidade cognitiva.
+
+        dado as diretrizes de acessibilidade do perfil cognitivo:
+        {profile_description}
+
+        Questionário atual (Markdown):
+        {actual_questionnaire_md}
+
+        dada a estrutura original (critérios com Likert 1–5 + Resumo Executivo), avalie se os questionarios novos seguém o padrão de questionário e as diretrizes do perfil e dê uma resposta conscisa(sim ou não), em caso de não mostre qual parte está errada e de forma conscisa diga o porque
+    """,
+
+    "atualizacao_questionario_v2": """
+        Você é um especialista em acessibilidade cognitiva.
+
+        OBJETIVO
+        Verificar se o NOVO questionário segue:
+        1) a ESTRUTURA do questionário original (blocos de critérios com escala Likert 1–5) e
+        2) as DIRETRIZES do perfil cognitivo abaixo,
+        E então responder de forma CONCISA: “SIM” ou “NÃO — <motivos curtos>”.
+
+        DIRETRIZES DO PERFIL (texto livre):
+        {profile_description}
+
+        QUESTIONÁRIO ORIGINAL (Markdown):
+        {actual_questionnaire_md}
+
+        ESCOPO DA AVALIAÇÃO (o que verificar):
+        - Estrutura:
+        - Cada critério em bloco identificável (título/heading).
+        - Escala Likert explícita 1–5 no bloco (números na ordem crescente).
+        - Presença de uma seção “Resumo Executivo” ao final (ou equivalente com este nome).
+        - Títulos/labels consistentes entre critérios (não precisa ser idêntico ao original, apenas coerente).
+        - Diretrizes do perfil cognitivo:
+        - Linguagem clara e direta; evitar jargões sem explicação.
+        - Frases objetivas; instruções compreensíveis.
+        - Termos e exemplos adequados ao perfil descrito.
+
+        NÃO-OBJETIVOS (NÃO avaliar, NÃO comentar):
+        - NÃO conte, compare nem comente a QUANTIDADE de critérios/perguntas.
+        - NÃO penalize REPETIÇÕES de critérios/perguntas; ignore redundâncias.
+        - NÃO comente sobre ordem, layout visual ou microformatação se a semântica estiver correta.
+        - NÃO reescreva o questionário; apenas valide conformidade.
+
+        REGRAS DE DECISÃO
+        - Responda “SIM” se (i) todos os blocos de critério tiverem escala 1–5 válida e (ii) houver “Resumo Executivo” e (iii) o texto não contrariar as diretrizes do perfil.
+        - Caso contrário, responda “NÃO — <até 3 motivos objetivos>”.
+        - Motivos devem referenciar a parte afetada de forma curta (ex.: “Critério ‘Tempo e Ritmo’: sem escala 1–5”; “Falta ‘Resumo Executivo’”; “Jargão sem explicação em ‘Consistência’”).
+
+        FORMATO DE SAÍDA (obrigatório, em uma única linha):
+        - Se conforme:  SIM
+        - Se não conforme:  NÃO — motivo1; motivo2; motivo3
+
+        OBSERVAÇÕES
+        - Seja objetivo. Nada além do formato acima.
+        - Ignore variações cosméticas que não afetem a estrutura 1–5 e o “Resumo Executivo”.
+    """,
+
+    "atualizacao_questionario_v3": """
+        Você é um especialista em acessibilidade cognitiva.
+
+        OBJETIVO
+        Verificar se o NOVO questionário segue:
+        1) o PADRÃO do questionário original (critérios em blocos com escala Likert 1–5 + “Resumo Executivo”), e
+        2) as DIRETRIZES do perfil cognitivo,
+        e então responder de forma CONCISA: “SIM” ou “NÃO — <motivos curtos>”.
+
+        DIRETRIZES DO PERFIL (texto livre):
+        {profile_description}
+
+        QUESTIONÁRIO ORIGINAL (Markdown):
+        {actual_questionnaire_md}
+
+        DEFINIÇÕES RÁPIDAS
+        - “Critério”: um bloco identificável com título/heading e instrução de resposta em escala 1–5.
+
+        ESCOPO DA AVALIAÇÃO (o que verificar):
+        - Padrão/estrutura:
+        - Cada critério em bloco identificável (título claro).
+        - Escala Likert explícita 1–5 (números em ordem crescente; âncoras opcionais).
+        - Presença de uma seção “Resumo Executivo” ao final (com esse nome).
+        - Consistência de títulos/labels entre critérios (não precisa ser idêntico ao original, apenas coerente).
+        - Aderência às diretrizes:
+        - Linguagem clara, direta e adequada ao perfil descrito.
+        - Instruções compreensíveis e não ambíguas.
+        - Cada critério deve estar relacionado (implícita ou explicitamente) a pelo menos uma diretriz do perfil.
+
+        CARDINALIDADE FLEXÍVEL (muito importante)
+        - Mínimo de 1 critério válido.
+        - Não é necessário corresponder 1:1 ao número de pontos das diretrizes.
+        - É permitido ter menos ou mais critérios do que o original.
+        - Redundâncias são permitidas se alinhadas às diretrizes.
+
+        NÃO-OBJETIVOS (NÃO avaliar, NÃO comentar)
+        - NÃO conte, compare nem mencione a QUANTIDADE de critérios/perguntas.
+        - NÃO penalize REPETIÇÕES; ignore redundâncias mesmo que pareçam similares.
+        - NÃO comente ordem, layout visual ou microformatação quando a semântica estiver correta.
+        - NÃO reescreva o questionário; apenas valide conformidade.
+
+        REGRAS DE DECISÃO
+        Responda “SIM” se TODAS as condições forem verdadeiras:
+        (i) existe ≥ 1 critério válido no padrão descrito,
+        (ii) todos os critérios presentes exibem escala 1–5 válida,
+        (iii) há “Resumo Executivo”,
+        (iv) nenhum critério contradiz as diretrizes do perfil e a linguagem é adequada.
+
+        Caso contrário, responda “NÃO — <até 3 motivos objetivos>”.
+        - Motivos devem ser curtos e apontar a parte afetada, p.ex.:
+        - “Falta ‘Resumo Executivo’”
+        - “Critério ‘Tempo e Ritmo’: sem escala 1–5”
+        - “Jargão sem explicação em ‘Consistência’”
+        - “Critério ‘X’ não se relaciona às diretrizes”
+
+        FORMATO DE SAÍDA (obrigatório, uma única linha):
+        - Conforme:  SIM
+        - Não conforme:  NÃO — motivo1; motivo2; motivo3
+
+        OBSERVAÇÕES
+        - Seja objetivo. Não inclua recomendações de reescrita, nem comentários sobre quantidade de itens ou repetição.
+    """,
+
     "avaliacao_geral": """
     Você receberá até 10 resultados de avaliações (texto livre em JSON ou texto).  
     Sua tarefa é **consolidar todos em um único Relatório Executivo** em **Markdown**, seguindo o modelo abaixo.
