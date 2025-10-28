@@ -3,7 +3,6 @@ import json
 import logging
 import os
 from app.openai_client import get_client, get_model
-from string import Template
 
 logger = logging.getLogger("profile_create")
 if not logger.handlers:
@@ -14,6 +13,82 @@ DEBUG = os.getenv("DEBUG", "0") in ("1", "true", "True")
 def _snip(text: str, n: int = 400) -> str:
     return text[:n] + ("…[truncated]" if len(text) > n else "")
 
+# =========================
+# Catálogo e Regras (novos)
+# =========================
+WCAG_INDEX = [
+    {"id": "1.4.3", "title": "Contrast (Minimum)", "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum"},
+    {"id": "1.4.11", "title": "Non-text Contrast", "url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast"},
+    {"id": "1.4.1", "title": "Use of Color", "url": "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color"},
+    {"id": "1.3.1", "title": "Info and Relationships", "url": "https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships"},
+    {"id": "3.3.2", "title": "Labels or Instructions", "url": "https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions"},
+]
+COGA_INDEX = [
+    {"id": "plain-language", "title": "Use plain, clear language", "url": "https://www.w3.org/TR/coga-usable/#plain-language"},
+    {"id": "redundant-cues", "title": "Provide cues beyond color", "url": "https://www.w3.org/TR/coga-usable/#redundant-cues"},
+    {"id": "familiar-icons", "title": "Use familiar icons", "url": "https://www.w3.org/TR/coga-usable/#familiar-icons"},
+    {"id": "chunking", "title": "Chunk content and provide headings", "url": "https://www.w3.org/TR/coga-usable/#help-users-understand"},
+]
+
+def _render_reference_catalog() -> str:
+    wcag_lines = "\n".join(f"  - {i['id']} — {i['title']} — {i['url']}" for i in WCAG_INDEX)
+    coga_lines = "\n".join(f"  - {i['id']} — {i['title']} — {i['url']}" for i in COGA_INDEX)
+    return (
+        "CATÁLOGO DE REFERÊNCIAS (uso obrigatório):\n"
+        "- **WCAG**:\n" + wcag_lines + "\n"
+        "- **COGA**:\n" + coga_lines + "\n"
+    )
+
+_LIKERT_ANCHORS = (
+    "Âncoras da Escala Likert (usar exatamente estas definições por critério):\n"
+    "- **1 (Crítico/Não Atende)**: Falhas graves que impedem a compreensão; viola a(s) referência(s) WCAG indicada(s) e contraria o COGA.\n"
+    "- **3 (Parcialmente Atende)**: Há progresso visível, mas persistem obstáculos cognitivos relevantes; atende parcialmente a WCAG indicada; COGA aplicado de forma inconsistente.\n"
+    "- **5 (Atende Bem/Ótimo)**: Critério cumprido com clareza; boas práticas do COGA evidentes; WCAG indicada atendida sem ressalvas.\n"
+)
+
+_WCAG_COGA_HELP = (
+    "Mapeamentos úteis para **imagens estáticas** (escolha os aplicáveis):\n"
+    "- **Contraste de texto** → WCAG 1.4.3; COGA: \"Use contraste suficiente\".\n"
+    "- **Contraste de ícones/controles** → WCAG 1.4.11; COGA: \"Controles fáceis de perceber\".\n"
+    "- **Não depender apenas de cor** → WCAG 1.4.1; COGA: \"Sinais redundantes, não só cor\".\n"
+    "- **Rótulos e instruções claros** → WCAG 3.3.2; COGA: \"Texto simples e direto\".\n"
+    "- **Hierarquia e relações visuais** → WCAG 1.3.1; COGA: \"Quebre em blocos e títulos claros\".\n"
+    "- **Ícones compreensíveis** → (use 1.3.1 do catálogo para relações/consistência); COGA: \"Pictogramas familiares\".\n"
+    "- **Legibilidade tipográfica** → WCAG 1.4.3/1.4.4* (em imagem estática, foque na legibilidade); COGA: \"Tipografia legível\".\n"
+)
+
+_CITATION_RULES = (
+    "REGRAS DE CITAÇÃO (OBRIGATÓRIAS):\n"
+    "- Em **cada critério**, selecione **no máximo 2** itens da **WCAG (CATÁLOGO)** e **1** do **COGA (CATÁLOGO)**.\n"
+    "- **Proibido** citar referência fora do catálogo (não inventar numeração/títulos).\n"
+    "- Se nada do catálogo se aplicar, escreva: **WCAG: N/A; COGA: N/A**.\n"
+)
+
+# ✨ NOVO: regras rígidas do Resumo Executivo para o modelo
+_RESUMO_RULES = (
+    "APÓS listar os critérios/notas, gere obrigatoriamente um **Resumo Executivo** contendo:\n"
+    "- **✅ Pontos Positivos** (mín. 2 bullets, focados no que é visível na imagem)\n"
+    "- **❌ Principais Problemas** (mín. 2 bullets, focados no que é visível na imagem)\n"
+    "- **📊 Pontuação Geral (média 1–5)** — calcule a média com **1 casa decimal** e use **vírgula** como separador (ex.: 4,3)\n"
+    "- **🔧 Prioridades de Correção** (mín. 3 itens, em ordem de impacto/custo-benefício)\n"
+    "Regra: **não** mencione animação/motion/hover (imagem estática). Foque em contraste, rótulos, hierarquia, iconografia, carga cognitiva e sinais redundantes.\n"
+)
+
+_STATIC_RULES_SYSTEM = (
+    "Você é um assistente especialista em acessibilidade cognitiva para **imagens estáticas**.\n"
+    "REGRAS DURAS:\n"
+    "1) A entrada é SEMPRE **uma imagem estática**. Não há vídeo, animação, transições, parallax, GIF ou movimento.\n"
+    "2) **Não crie critérios** sobre animação, movimento, microinterações, hover, foco, autoplay, tempo ou áudio.\n"
+    "3) Se a entrada mencionar reunião/processos/áudio/vídeo/motion, **reformule** o conceito para um **equivalente visual verificável** na imagem (ex.: previsibilidade → títulos/hierarquia; ritmo → densidade/clutter). Se não houver equivalente, marque como **N/A**.\n"
+    "4) **Questionário** (6–10 critérios): para **cada critério**, inclua **Nome**, **Objetivo cognitivo**, **Como avaliar (na imagem)**, **Escala Likert 1/3/5 específica**, **Evidências a coletar**, e **Referências** (≤2 WCAG + 1 COGA do CATÁLOGO ou N/A).\n"
+    "5) **Resumo Executivo** ao final com os itens obrigatórios.\n"
+    "6) **Não liste referências irrelevantes** ao que é visível.\n"
+    "\n" + _LIKERT_ANCHORS + "\n" + _WCAG_COGA_HELP + "\n" + _CITATION_RULES + "\n" + _RESUMO_RULES + "\n" + _render_reference_catalog()
+)
+
+# =========================
+# PROMPT JSON (mantido, com regras injetadas)
+# =========================
 PROMPT_JSON_SPEC = """
 Você é um especialista em acessibilidade cognitiva.
 Gere uma resposta ESTRITAMENTE em JSON (sem markdown, sem explicações) no formato:
@@ -24,17 +99,22 @@ Gere uma resposta ESTRITAMENTE em JSON (sem markdown, sem explicações) no form
 }}
 
 Requisitos:
-- "guidelines": sintetize recomendações práticas mapeadas às diretrizes W3C/WCAG/COGA/GAIA (ex.: WCAG 1.4.3, 2.4.6 etc). Entregue em Markdown com subtítulos e bullets.
-- "questionnaire": Markdown com ~5–8 critérios numerados (1️⃣, 2️⃣, …), cada um com breve justificativa e campo para nota (Likert 1–5).
-  Inclua ao final “Resumo Executivo” com: ✅ Pontos Positivos, ❌ Principais Problemas, 📊 Pontuação Geral (instrução: média das notas), 🔧 Prioridades de Correção.
+- "guidelines": sintetize recomendações práticas mapeadas às diretrizes W3C/WCAG/COGA (cite GAIA apenas se realmente pertinente). Entregue em Markdown com subtítulos e bullets.
+- "questionnaire": **seguir estritamente as REGRAS DURAS abaixo** (imagem estática, formato por critério, referências do CATÁLOGO, âncoras 1/3/5, Resumo Executivo).
 - NÃO inclua cercas de código (```), apenas JSON puro.
 - NÃO envolva o JSON em Markdown.
 
 Contexto do perfil:
 Nome: {name}
 Descrição: \"\"\"{description}\"\"\"
-"""
 
+REGRAS DURAS E CATÁLOGO (uso obrigatório):
+{STATIC_RULES}
+""".strip()
+
+# =========================
+# Função principal (assinatura intacta)
+# =========================
 async def create_profile_assets(name: str, description: str, model_override: str | None = None) -> dict:
     """
     Retorna { "guidelines": str, "questionnaire": str } para o perfil informado.
@@ -44,9 +124,13 @@ async def create_profile_assets(name: str, description: str, model_override: str
     if DEBUG: print("[DEBUG] Montando prompt…")
     client = get_client()
     model = get_model(model_override)
-    user_prompt = PROMPT_JSON_SPEC.format(name=os.name, description=description)
-    print("Using user_prompt:", user_prompt)
 
+    # ⚠️ Corrigido: usar name=name e injetar as novas regras
+    user_prompt = PROMPT_JSON_SPEC.format(
+        name=name,
+        description=description,
+        STATIC_RULES=_STATIC_RULES_SYSTEM,
+    )
     if DEBUG:
         print("[DEBUG] Modelo:", model)
         print("[DEBUG] Prompt (primeiros 400 chars):\n", _snip(user_prompt))
@@ -56,7 +140,7 @@ async def create_profile_assets(name: str, description: str, model_override: str
         completion = await client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "Você é um assistente especialista em acessibilidade (WCAG/COGA/GAIA) e geração de questionários."},
+                {"role": "system", "content": "Você é um assistente especialista em acessibilidade (WCAG/COGA) e geração de questionários."},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.2,
@@ -107,3 +191,75 @@ async def create_profile_assets(name: str, description: str, model_override: str
         if DEBUG:
             print("[DEBUG][Exception]", err_msg)
         raise ValueError(err_msg)
+
+# =========================
+# Failsafe opcional (para quando você só tem as notas)
+# =========================
+def build_summary_from_scores(scores: dict[str, int]) -> str:
+    """
+    Recebe um dict { 'Critério': nota_int } e devolve um Resumo Executivo (Markdown).
+    Formata a média com vírgula e 1 casa decimal. Use quando o modelo retornar só as notas.
+    """
+    if not scores:
+        return (
+            "## Resumo Executivo\n"
+            "**✅ Pontos Positivos**\n- N/A\n\n"
+            "**❌ Principais Problemas**\n- N/A\n\n"
+            "**📊 Pontuação Geral:** N/A\n\n"
+            "**🔧 Prioridades de Correção**\n- N/A\n"
+        )
+
+    total = sum(scores.values())
+    media = total / len(scores)
+    media_fmt = f"{media:.1f}".replace(".", ",")
+
+    positivos, problemas, prioridades = [], [], []
+
+    # heurísticas simples
+    low = {k: v for k, v in scores.items() if v <= 3}
+    high = {k: v for k, v in scores.items() if v >= 4}
+
+    if any("contraste do texto" in k.lower() for k in high):
+        positivos.append("Bom contraste em textos, leitura confortável.")
+    if any("ícones" in k.lower() or "elementos gráficos" in k.lower() for k in high):
+        positivos.append("Ícones/elementos gráficos perceptíveis no fundo.")
+    if any("organização" in k.lower() or "hierarquia" in k.lower() for k in high):
+        positivos.append("Estrutura visual organizada e hierarquia clara.")
+    if any("rótulos" in k.lower() for k in high):
+        positivos.append("Rótulos/instruções claros e diretos.")
+
+    if any("cor" in k.lower() for k in low):
+        problemas.append("Dependência parcial de cor sem sinais redundantes suficientes.")
+        prioridades.append("Adicionar cues redundantes (ícone/texto/padrão) onde hoje se usa apenas cor.")
+    if any("ícones" in k.lower() for k in low):
+        problemas.append("Alguns ícones pouco familiares/ambíguos.")
+        prioridades.append("Trocar/rotular ícones pouco familiares por pictogramas reconhecíveis.")
+    if any("contraste" in k.lower() for k in low):
+        problemas.append("Áreas com contraste insuficiente prejudicam a percepção.")
+        prioridades.append("Normalizar contraste mínimo em elementos textuais e não textuais.")
+    if any("organização" in k.lower() or "hierarquia" in k.lower() for k in low):
+        problemas.append("Hierarquia ou agrupamento visual inconsistentes em alguns pontos.")
+        prioridades.append("Rever agrupamentos/títulos para reduzir carga cognitiva.")
+
+    if not positivos:
+        positivos.append("Legibilidade e organização gerais adequadas.")
+    while len(problemas) < 2:
+        problemas.append("Oportunidades de melhoria na consistência visual e clareza de rótulos.")
+    while len(prioridades) < 3:
+        prioridades.append("Revisar densidade/ruído visual em áreas mais carregadas.")
+
+    md = [
+        "## Resumo Executivo",
+        "**✅ Pontos Positivos:**",
+        *[f"- {p}" for p in positivos],
+        "",
+        "**❌ Principais Problemas:**",
+        *[f"- {p}" for p in problemas],
+        "",
+        f"**📊 Pontuação Geral:** {media_fmt}",
+        "",
+        "**🔧 Prioridades de Correção:**",
+        *[f"- {p}" for p in prioridades],
+        "",
+    ]
+    return "\n".join(md)
