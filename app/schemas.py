@@ -64,3 +64,26 @@ class ExecutiveReportRequest(BaseModel):
 
 class ExecutiveReportResponse(BaseModel):
     report: str
+
+class ConsolidateEvaluationsRequest(BaseModel):
+    """
+    Recebe exatamente o que você mostrou:
+    [
+        "1. Contraste do Texto: 5 ...",
+        "1. Contraste do Texto: 4 ..."
+    ]
+    """
+    messages: List[str]
+
+
+class CommonItem(BaseModel):
+    text: str
+    count: int
+
+
+class ConsolidateEvaluationsResponse(BaseModel):
+    overall_avg: Optional[float] = None
+    criteria_avg: Dict[str, float]
+    common_problems: List[CommonItem]
+    common_positives: List[CommonItem]
+    diagnosis_markdown: str

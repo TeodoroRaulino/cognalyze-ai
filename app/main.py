@@ -5,13 +5,18 @@ from app.schemas import (
     AnalyzeRequest, LLMResponse,
     CreateProfileRequest, CreateProfileResponse,
     EvaluationRequest, EvaluationResponse,
-    ResultInput, ExecutiveReportRequest, ExecutiveReportResponse
+    ResultInput, ExecutiveReportRequest, ExecutiveReportResponse,
+    ConsolidateEvaluationsRequest, ConsolidateEvaluationsResponse, CommonItem,
 )
 from app.usecase.profile_usecase import suggest_profile_name
 from app.usecase.questionnaire_usecase import generate_from_profile, update_questionnaire
 from app.usecase.analyze_usecase import analyze
 from app.usecase.profile_create_usecase import create_profile_assets
-from app.usecase.evaluation_usecase import evaluate_image, generate_executive_report
+from app.usecase.evaluation_usecase import (
+    evaluate_image,
+    generate_executive_report,
+    aggregate_evaluations,
+)
 
 app = FastAPI(title="Cognalyze Simple LLM API", version="0.2.0")
 
@@ -110,3 +115,26 @@ async def post_questionnaire_with_image(body: EvaluationRequest):
 async def create_executive_report(payload: ExecutiveReportRequest) -> ExecutiveReportResponse:
     report = await generate_executive_report(payload.results)
     return ExecutiveReportResponse(report=report)
+
+@app.post(
+    "/evaluation/consolidate",
+    response_model=ConsolidateEvaluationsResponse,
+    summary="Consolida várias respostas de avaliação (LLM) e devolve diagnóstico estruturado",
+)
+async def consolidate_evaluations(payload: ConsolidateEvaluationsRequest) -> ConsolidateEvaluationsResponse:
+    if not payload.messages:
+        raise HTTPException(status_code=400, detail="Lista de mensagens vazia.")
+    agg = aggregate_evaluations(payload.messages)
+    common_problems = [
+        CommonItem(text=text, count=count) for text, count in agg["common_problems"]
+    ]
+    common_positives = [
+        CommonItem(text=text, count=count) for text, count in agg["common_positives"]
+    ]
+    return ConsolidateEvaluationsResponse(
+        overall_avg=agg["overall_avg"],
+        criteria_avg=agg["criteria_avg"],
+        common_problems=common_problems,
+        common_positives=common_positives,
+        diagnosis_markdown=agg["diagnosis_markdown"],
+    )

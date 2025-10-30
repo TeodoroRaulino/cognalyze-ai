@@ -64,14 +64,23 @@ _CITATION_RULES = (
     "- Se nada do catálogo se aplicar, escreva: **WCAG: N/A; COGA: N/A**.\n"
 )
 
-# ✨ NOVO: regras rígidas do Resumo Executivo para o modelo
 _RESUMO_RULES = (
-    "APÓS listar os critérios/notas, gere obrigatoriamente um **Resumo Executivo** contendo:\n"
-    "- **✅ Pontos Positivos** (mín. 2 bullets, focados no que é visível na imagem)\n"
-    "- **❌ Principais Problemas** (mín. 2 bullets, focados no que é visível na imagem)\n"
-    "- **📊 Pontuação Geral (média 1–5)** — calcule a média com **1 casa decimal** e use **vírgula** como separador (ex.: 4,3)\n"
-    "- **🔧 Prioridades de Correção** (mín. 3 itens, em ordem de impacto/custo-benefício)\n"
-    "Regra: **não** mencione animação/motion/hover (imagem estática). Foque em contraste, rótulos, hierarquia, iconografia, carga cognitiva e sinais redundantes.\n"
+    "APÓS listar os critérios/notas, gere obrigatoriamente um **Resumo Executivo (template, não preenchido)** contendo exatamente:\n"
+    "- **✅ Pontos Positivos:**\n"
+    "  - (preencher após a avaliação da imagem)\n"
+    "  - (preencher após a avaliação da imagem)\n"
+    "- **❌ Principais Problemas:**\n"
+    "  - (preencher após a avaliação da imagem)\n"
+    "  - (preencher após a avaliação da imagem)\n"
+    "- **📊 Pontuação Geral:** (calcular média 1–5 após preencher as notas)\n"
+    "- **🔧 Prioridades de Correção:**\n"
+    "  1. (preencher após a avaliação da imagem)\n"
+    "  2. (preencher após a avaliação da imagem)\n"
+    "  3. (preencher após a avaliação da imagem)\n"
+    "REGRAS:\n"
+    "- **NÃO** invente pontuação real (ex.: 3,7 ou 4,2).\n"
+    "- **NÃO** descreva problemas específicos da imagem, porque a imagem ainda será enviada depois.\n"
+    "- O objetivo é gerar um **molde** de questionário que será usado por outro processo (ex.: `evaluate_image`).\n"
 )
 
 _STATIC_RULES_SYSTEM = (
@@ -79,11 +88,20 @@ _STATIC_RULES_SYSTEM = (
     "REGRAS DURAS:\n"
     "1) A entrada é SEMPRE **uma imagem estática**. Não há vídeo, animação, transições, parallax, GIF ou movimento.\n"
     "2) **Não crie critérios** sobre animação, movimento, microinterações, hover, foco, autoplay, tempo ou áudio.\n"
-    "3) Se a entrada mencionar reunião/processos/áudio/vídeo/motion, **reformule** o conceito para um **equivalente visual verificável** na imagem (ex.: previsibilidade → títulos/hierarquia; ritmo → densidade/clutter). Se não houver equivalente, marque como **N/A**.\n"
+    "3) Se a entrada mencionar reunião/processos/áudio/vídeo/motion, **reformule** o conceito para um **equivalente visual verificável**.\n"
     "4) **Questionário** (6–10 critérios): para **cada critério**, inclua **Nome**, **Objetivo cognitivo**, **Como avaliar (na imagem)**, **Escala Likert 1/3/5 específica**, **Evidências a coletar**, e **Referências** (≤2 WCAG + 1 COGA do CATÁLOGO ou N/A).\n"
-    "5) **Resumo Executivo** ao final com os itens obrigatórios.\n"
+    "5) Ao final, **SEM preencher com dados reais**, gere o Resumo Executivo conforme o template abaixo.\n"
     "6) **Não liste referências irrelevantes** ao que é visível.\n"
-    "\n" + _LIKERT_ANCHORS + "\n" + _WCAG_COGA_HELP + "\n" + _CITATION_RULES + "\n" + _RESUMO_RULES + "\n" + _render_reference_catalog()
+    "\n"
+    + _LIKERT_ANCHORS
+    + "\n"
+    + _WCAG_COGA_HELP
+    + "\n"
+    + _CITATION_RULES
+    + "\n"
+    + _RESUMO_RULES
+    + "\n"
+    + _render_reference_catalog()
 )
 
 # =========================
@@ -160,6 +178,7 @@ async def create_profile_assets(name: str, description: str, model_override: str
         data = json.loads(raw)
         guidelines = str(data.get("guidelines", "")).strip()
         questionnaire = str(data.get("questionnaire", "")).strip()
+        questionnaire = _sanitize_questionnaire_template(questionnaire)
 
         if not guidelines or not questionnaire:
             msg = "JSON válido porém campos obrigatórios ausentes (guidelines/questionnaire vazios)."
@@ -263,3 +282,34 @@ def build_summary_from_scores(scores: dict[str, int]) -> str:
         "",
     ]
     return "\n".join(md)
+
+def _sanitize_questionnaire_template(q: str) -> str:
+    """
+    Garante que o bloco de Resumo Executivo fique em modo template.
+    Se detectar uma linha com 'Pontuação Geral:' e número, troca por placeholder.
+    """
+    if "Resumo Executivo" not in q:
+        return q
+
+    lines = q.splitlines()
+    out = []
+    for line in lines:
+        # Se vier algo como "📊 Pontuação Geral (média 1–5): 3,7" a gente substitui
+        if "Pontuação Geral" in line:
+            out.append("📊 Pontuação Geral: (calcular média 1–5 após preencher as notas)")
+            continue
+        # Se vier pontos positivos/problemas já preenchidos, troca
+        if line.strip().startswith("- ✅") or "Pontos Positivos:" in line:
+            out.append("✅ Pontos Positivos:")
+            out.append("- (preencher após a avaliação da imagem)")
+            continue
+        if "Principais Problemas" in line:
+            out.append("❌ Principais Problemas:")
+            out.append("- (preencher após a avaliação da imagem)")
+            continue
+        if "Prioridades de Correção" in line:
+            out.append("🔧 Prioridades de Correção:")
+            out.append("1. (preencher após a avaliação da imagem)")
+            continue
+        out.append(line)
+    return "\n".join(out)
