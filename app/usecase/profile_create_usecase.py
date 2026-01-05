@@ -42,7 +42,9 @@ def _render_reference_catalog() -> str:
 _LIKERT_ANCHORS = (
     "Âncoras da Escala Likert (usar exatamente estas definições por critério):\n"
     "- **1 (Crítico/Não Atende)**: Falhas graves que impedem a compreensão; viola a(s) referência(s) WCAG indicada(s) e contraria o COGA.\n"
+    "- **2 (Atende Insuficientemente)**: indica que há tentativas pontuais de atender ao critério, porém de forma incipiente ou inadequada, aproximando-se mais de uma falha crítica do que de um atendimento parcial\n"
     "- **3 (Parcialmente Atende)**: Há progresso visível, mas persistem obstáculos cognitivos relevantes; atende parcialmente a WCAG indicada; COGA aplicado de forma inconsistente.\n"
+    "- **4 (Atende Adequadamente)**: indica que o critério é majoritariamente atendido, restando apenas ajustes pontuais ou inconsistências menores que impedem sua classificação como atendimento pleno\n"
     "- **5 (Atende Bem/Ótimo)**: Critério cumprido com clareza; boas práticas do COGA evidentes; WCAG indicada atendida sem ressalvas.\n"
 )
 
