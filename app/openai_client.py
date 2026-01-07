@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
-openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+openai_model = os.getenv("OPENAI_MODEL", "gpt-5.2-2025-12-11")
 
 def get_client() -> AsyncOpenAI:
     if not openai_api_key:
