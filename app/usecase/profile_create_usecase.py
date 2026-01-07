@@ -91,7 +91,7 @@ _STATIC_RULES_SYSTEM = (
     "1) A entrada é SEMPRE **uma imagem estática**. Não há vídeo, animação, transições, parallax, GIF ou movimento.\n"
     "2) **Não crie critérios** sobre animação, movimento, microinterações, hover, foco, autoplay, tempo ou áudio.\n"
     "3) Se a entrada mencionar reunião/processos/áudio/vídeo/motion, **reformule** o conceito para um **equivalente visual verificável**.\n"
-    "4) **Questionário** (6–10 critérios): para **cada critério**, inclua **Nome**, **Objetivo cognitivo**, **Como avaliar (na imagem)**, **Escala Likert 1/3/5 específica**, **Evidências a coletar**, e **Referências** (≤2 WCAG + 1 COGA do CATÁLOGO ou N/A).\n"
+    "4) **Questionário** (6–10 critérios): para **cada critério**, inclua **Nome**, **Objetivo cognitivo**, **Como avaliar (na imagem)**, **Escala Likert 1/2/3/4/5 específica**, **Evidências a coletar**, e **Referências** (≤2 WCAG + 1 COGA do CATÁLOGO ou N/A).\n"
     "5) Ao final, **SEM preencher com dados reais**, gere o Resumo Executivo conforme o template abaixo.\n"
     "6) **Não liste referências irrelevantes** ao que é visível.\n"
     "\n"
@@ -120,7 +120,7 @@ Gere uma resposta ESTRITAMENTE em JSON (sem markdown, sem explicações) no form
 
 Requisitos:
 - "guidelines": sintetize recomendações práticas mapeadas às diretrizes W3C/WCAG/COGA (cite GAIA apenas se realmente pertinente). Entregue em Markdown com subtítulos e bullets.
-- "questionnaire": **seguir estritamente as REGRAS DURAS abaixo** (imagem estática, formato por critério, referências do CATÁLOGO, âncoras 1/3/5, Resumo Executivo).
+- "questionnaire": **seguir estritamente as REGRAS DURAS abaixo** (imagem estática, formato por critério, referências do CATÁLOGO, âncoras 1/2/3/4/5, Resumo Executivo).
 - NÃO inclua cercas de código (```), apenas JSON puro.
 - NÃO envolva o JSON em Markdown.
 
