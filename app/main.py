@@ -1,4 +1,3 @@
-from app.usecase.consolidate_usecase import aggregate_evaluations
 from fastapi import FastAPI, HTTPException
 from app.schemas import (
     ProfileSuggestRequest, ProfileSuggestResponse,
@@ -16,6 +15,7 @@ from app.usecase.profile_create_usecase import create_profile_assets
 from app.usecase.evaluation_usecase import (
     evaluate_image,
     generate_executive_report,
+    aggregate_evaluations,
 )
 
 app = FastAPI(title="Cognalyze Simple LLM API", version="0.2.0")
@@ -124,14 +124,17 @@ async def create_executive_report(payload: ExecutiveReportRequest) -> ExecutiveR
 async def consolidate_evaluations(payload: ConsolidateEvaluationsRequest) -> ConsolidateEvaluationsResponse:
     if not payload.messages:
         raise HTTPException(status_code=400, detail="Lista de mensagens vazia.")
-
     agg = aggregate_evaluations(payload.messages)
-
+    common_problems = [
+        CommonItem(text=text, count=count) for text, count in agg["common_problems"]
+    ]
+    common_positives = [
+        CommonItem(text=text, count=count) for text, count in agg["common_positives"]
+    ]
     return ConsolidateEvaluationsResponse(
-        overall=agg["overall"],
-        criteria=agg["criteria"],
-        common_problems=agg["common_problems"],
-        common_positives=agg["common_positives"],
-        alerts=agg["alerts"],
+        overall_avg=agg["overall_avg"],
+        criteria_avg=agg["criteria_avg"],
+        common_problems=common_problems,
+        common_positives=common_positives,
         diagnosis_markdown=agg["diagnosis_markdown"],
     )
