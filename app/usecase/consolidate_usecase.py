@@ -13,6 +13,30 @@ from app.schemas import AlertItem, CommonItem, CriterionStats, OverallStats
 # -----------------------------
 # Regex (tolerante ao seu payload)
 # -----------------------------
+def clean_criterion_label(label: str) -> str:
+    """
+    Remove ruídos comuns do label:
+    - markdown headings ###, ##, #
+    - numeração '1.' '1)' etc
+    - bullets
+    - espaços duplicados
+    """
+    s = label.strip()
+
+    # remove heading markdown: ### Título
+    s = re.sub(r"^\s*#{1,6}\s*", "", s)
+
+    # remove prefixos numerados: "1." "1)" "1-" etc
+    s = re.sub(r"^\s*\d+\s*[\.\)\-]\s*", "", s)
+
+    # remove bullets
+    s = re.sub(r"^\s*[-•*]\s*", "", s)
+
+    # normaliza espaços
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
 SCORE_LINE_RE = re.compile(
     r"^\s*(?:\d+\.)?\s*(?P<label>[^:]+?)\s*:\s*(?P<score>\d+(?:[.,]\d+)?)\s*$",
     re.IGNORECASE,
@@ -74,8 +98,8 @@ def parse_scores_from_message(message: str) -> Tuple[Dict[str, float], Optional[
         m = SCORE_LINE_RE.match(line)
         if not m:
             continue
-
-        label = m.group("label").strip()
+        
+        label = clean_criterion_label(m.group("label"))
         score = normalize_score(m.group("score"))
 
         if is_overall_label(label):
@@ -155,10 +179,12 @@ class ConsolidatedReport:
 
 
 def consolidate(messages: Iterable[str]) -> ConsolidatedReport:
+    msgs = list(messages)  # ✅ garante reuso + total conhecido
+
     score_maps: List[Dict[str, float]] = []
     overall_list: List[float] = []
 
-    for m in messages:
+    for m in msgs:
         sm, overall = parse_scores_from_message(m)
         score_maps.append(sm)
         if overall is not None:
@@ -208,29 +234,46 @@ def consolidate(messages: Iterable[str]) -> ConsolidatedReport:
                 seen_pri.add(key)
                 pri.append(item)
 
-    return ConsolidatedReport(
-        criteria=all_criteria,
-        per_criterion_scores=per_criterion_scores,
-        per_criterion_stats=per_criterion_stats,
-        overall_score=overall,
-        overall_score_from_messages=overall_from_msgs,
-        positives=pos,
-        problems=prob,
-        priorities=pri,
+    report = ConsolidatedReport(
+      criteria=all_criteria,
+      per_criterion_scores=per_criterion_scores,
+      per_criterion_stats=per_criterion_stats,
+      overall_score=overall,
+      overall_score_from_messages=overall_from_msgs,
+      positives=pos,
+      problems=prob,
+      priorities=pri,
     )
+    report.total_messages = len(msgs)
+    return report
+
 
 
 def render_markdown(report: ConsolidatedReport, title: str = "Relatório Consolidado de Avaliação") -> str:
     lines: List[str] = []
     lines.append(f"# {title}\n")
 
+    # Cabeçalho com contexto
+    total_msgs = getattr(report, "n_messages", None)  # se não existir, tudo bem
+    # (como você já tem len(messages) em aggregate_evaluations, vamos passar isso abaixo)
+
     lines.append("## 📊 Resultados Quantitativos\n")
-    lines.append("| Critério Avaliado | N | Média | Mín | Máx | Desvio Padrão |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
+    lines.append(
+        "> **n (amostra)** = quantidade de avaliações que continham este critério após o parse.\n"
+        "> Se algum critério não aparecer em todas as avaliações, o **n** dele será menor.\n"
+    )
+
+    lines.append("| Critério Avaliado | n (amostra) | Cobertura | Média | Mín | Máx | Desvio Padrão |")
+    lines.append("|---|---:|---:|---:|---:|---:|---:|")
+
     for c in report.criteria:
         st = report.per_criterion_stats[c]
+        n = int(st["n"])
+        total = report.total_messages if hasattr(report, "total_messages") else None
+        coverage = f"{n}/{total}" if total else str(n)
+
         lines.append(
-            f"| {c} | {st['n']} | {fmt_pt(st['mean'])} | {fmt_pt(st['min'])} | {fmt_pt(st['max'])} | {fmt_pt(st['stdev'])} |"
+            f"| {c} | {n} | {coverage} | {fmt_pt(st['mean'])} | {fmt_pt(st['min'])} | {fmt_pt(st['max'])} | {fmt_pt(st['stdev'])} |"
         )
 
     lines.append("\n## ⭐ Pontuação Global\n")
@@ -244,12 +287,11 @@ def render_markdown(report: ConsolidatedReport, title: str = "Relatório Consoli
         key=lambda x: x[1],
         reverse=True,
     )
-    if divergences:
-        top_div = [(c, s) for c, s in divergences if s >= 0.8][:3]  # threshold ajustável
-        if top_div:
-            lines.append("\n## ⚠️ Alertas (alta divergência entre avaliações)\n")
-            for c, s in top_div:
-                lines.append(f"- **{c}** — desvio padrão: {fmt_pt(s)}")
+    top_div = [(c, s) for c, s in divergences if s >= 0.8][:3]  # threshold ajustável
+    if top_div:
+        lines.append("\n## ⚠️ Alertas (alta divergência entre avaliações)\n")
+        for c, s in top_div:
+            lines.append(f"- **{c}** — desvio padrão: {fmt_pt(s)}")
 
     if report.positives:
         lines.append("\n## ✅ Pontos Positivos (agregados)\n")
@@ -268,7 +310,6 @@ def render_markdown(report: ConsolidatedReport, title: str = "Relatório Consoli
             lines.append(f"{i}. {clean}")
 
     return "\n".join(lines)
-
 
 def aggregate_evaluations(messages: List[str]) -> Dict[str, Any]:
     report = consolidate(messages)
