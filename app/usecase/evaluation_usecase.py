@@ -209,3 +209,14 @@ async def generate_executive_report(results: List[str]) -> str:
     )
 
     return response.output_text
+
+
+def extract_criteria_titles(questionnaire: str) -> list[str]:
+    return [m.group(1).strip() for m in re.finditer(r"(?m)^###\s+(.+)$", questionnaire)]
+
+def validate_evaluation_output(output: str, criteria: list[str]) -> None:
+    for c in criteria:
+        if not re.search(rf"(?m)^{re.escape(c)}:\s*[1-5]\s*$", output):
+            raise ValueError(f"Resposta inválida: faltando linha de nota para '{c}'")
+    if "Resumo Executivo" not in output:
+        raise ValueError("Resposta inválida: faltando bloco 'Resumo Executivo'")

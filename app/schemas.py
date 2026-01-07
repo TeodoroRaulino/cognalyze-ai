@@ -66,24 +66,34 @@ class ExecutiveReportResponse(BaseModel):
     report: str
 
 class ConsolidateEvaluationsRequest(BaseModel):
-    """
-    Recebe exatamente o que você mostrou:
-    [
-        "1. Contraste do Texto: 5 ...",
-        "1. Contraste do Texto: 4 ..."
-    ]
-    """
-    messages: List[str]
-
+    messages: List[str] = Field(default_factory=list)
 
 class CommonItem(BaseModel):
     text: str
     count: int
 
+class CriterionStats(BaseModel):
+    name: str
+    n: int
+    mean: Optional[float] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+    stdev: Optional[float] = None
+    scores: List[float] = Field(default_factory=list)
+
+class OverallStats(BaseModel):
+    mean_by_criteria: Optional[float] = None
+    mean_reported_overall: Optional[float] = None  # se veio "Pontuação Geral" nas mensagens
+    n_messages: int
+
+class AlertItem(BaseModel):
+    criterion: str
+    stdev: float
 
 class ConsolidateEvaluationsResponse(BaseModel):
-    overall_avg: Optional[float] = None
-    criteria_avg: Dict[str, float]
+    overall: OverallStats
+    criteria: List[CriterionStats]
     common_problems: List[CommonItem]
     common_positives: List[CommonItem]
+    alerts: List[AlertItem]
     diagnosis_markdown: str

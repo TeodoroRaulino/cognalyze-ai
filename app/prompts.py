@@ -114,9 +114,50 @@ PROMPTS = {
     Entrada do usuário: {message}
     """,
 
+    # ✅ Ajustado para o novo padrão do seu questionário (headings ###)
+    # ✅ Pontuação Geral pode ser ponto flutuante (ex.: 4,3)
     "avaliacao_questionario": """
-    Faça a avaliação do questionario a seguir para a imagem e retorne somente respostas da avaliação em português, evite cálculos na resposta retornando só o resultado númerico: {message}
-    """,
+    Você é especialista em acessibilidade cognitiva para **imagens estáticas**.
+
+    Avalie a imagem usando **somente** os critérios do QUESTIONÁRIO abaixo.
+    Não crie critérios novos.
+
+    O QUESTIONÁRIO segue este padrão: cada critério começa com um heading Markdown:
+    ### <Nome do Critério>
+
+    SAÍDA (obrigatória)
+    1) Para cada critério do questionário (na mesma ordem), retorne uma linha:
+    "<NOME DO CRITÉRIO>: <NOTA>"
+    - NOTA = inteiro 1 a 5 (sem texto adicional).
+    - NOME DO CRITÉRIO = exatamente o texto do heading "### ...".
+
+    2) Depois, retorne exatamente este bloco:
+
+    Resumo Executivo
+    ✅ Pontos Positivos:
+    - <item 1>
+    - <item 2>
+    - <item 3>
+    ❌ Principais Problemas:
+    - <item 1>
+    - <item 2>
+    - <item 3>
+    📊 Pontuação Geral: <ponto flutuante 1-5 com 1 casa decimal OU N/A>
+    🔧 Prioridades de Correção:
+    1. <item 1>
+    2. <item 2>
+    3. <item 3>
+
+    REGRAS
+    - Responda somente em português.
+    - Não inclua explicações, justificativas, markdown extra ou títulos fora do especificado.
+    - Use "Como Avaliar (na imagem)" e a "Escala Likert" de cada critério.
+    - Se um critério não puder ser verificado na imagem, use nota 3 como fallback.
+    - A Pontuação Geral deve ser a média das notas (1–5) com **1 casa decimal** (use vírgula, ex.: 4,3) ou N/A.
+
+    QUESTIONÁRIO:
+    {message}
+    """.strip(),
 
     "avaliacao_geral": """
     Você receberá até 10 resultados de avaliações (texto livre em JSON ou texto).  
